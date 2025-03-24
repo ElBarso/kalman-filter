@@ -70,12 +70,11 @@ def generate_2D_bullet_trajectory(x_0, y_0, vx_0, vy_0, delta_t, G, Q,  total_du
    return np.array(trajectory), steps
             
 ###################################################################################     
-def implement_kalman_filter(X_0, P_0, F, U, Q, R):
+
+def implement_kalman_filter(X_0, P_0, F, H, U, Q, R, G, measurements, time_steps):
    
    filtered_trajectory = []
-   filtered_velocities = []
-   
-   measurements, time_steps= generate_2D_bullet_trajectory(*X_0, delta_t=DELTA_T, G=G, Q=Q, total_duration=150)
+   filtered_velocities = []   
       
    # set intial conditions
    x_k1 = X_0
@@ -104,7 +103,7 @@ def implement_kalman_filter(X_0, P_0, F, U, Q, R):
          filtered_velocities.append((x_k_k1[2], x_k_k1[3]))
       
       
-   return np.array(filtered_trajectory), measurements, np.array(filtered_velocities)
+   return np.array(filtered_trajectory), np.array(filtered_velocities)
          
       
 if __name__ == "__main__":
@@ -140,7 +139,8 @@ if __name__ == "__main__":
    fig = plt.figure()
    x_limits = []
    for u in U:
-      kalman_traj, experiment_traj, kalman_velocities = implement_kalman_filter(X_0, P_0, F, u, Q, R)
+      experiment_traj, time_steps=generate_2D_bullet_trajectory(*X_0, DELTA_T, G=G, Q=Q, total_duration=150)
+      kalman_traj, kalman_velocities = implement_kalman_filter(X_0, P_0, F, H, u, Q, R, G, experiment_traj, time_steps)
       print("{kal} {exp}".format(kal=kalman_traj.shape, exp=experiment_traj.shape))
       plt.plot(kalman_traj[:,0], kalman_traj[:,1], label=f'u={u}',lw=1)
    plt.plot(experiment_traj[:,0], experiment_traj[:,1], label="experiment")
