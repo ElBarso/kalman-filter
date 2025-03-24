@@ -8,20 +8,11 @@ import matplotlib.pyplot as plt
 # 3) measurement k  is acquired
 # 4) Measurement k is used tu optimize the a priori estimate --> k optimized a posteriori estimate
 # 5) Repeat
-
-
-def compute_state_covariance_prior_estimate(P_k1, F, Q):
-   P_k_k1 = F @ P_k1 @ F.T + Q
-   return P_k_k1
-
-def compute_state_prior_estimate(x_k1, F, U):
-   x_k_k1 = F @ x_k1 + U
-   return x_k_k1   
   
 def compute_prior_estimates(x_k1, P_k1, F, Q, U):
    """Compute a priori estimates for both state and state covariance."""
-   x_k_k1 = compute_state_prior_estimate(x_k1, F=F, U=U)   
-   P_k_k1 = compute_state_covariance_prior_estimate(P_k1, F=F, Q=Q)
+   x_k_k1 = x_k_k1 = F @ x_k1 + U
+   P_k_k1 = P_k_k1 = F @ P_k1 @ F.T + Q
    return x_k_k1, P_k_k1
 
 def compute_kalman_gain(P, H, R):
@@ -37,16 +28,20 @@ def update_prior_estimates(state_prior_estimate, state_covariance_prior_estimate
    updated_covariance_state = (np.eye(4) - kalman_gain@H) @ state_covariance_prior_estimate
    return updated_state, updated_covariance_state
 
-
 def generate_2D_bullet_trajectory(x_0, y_0, vx_0, vy_0, delta_t, G, Q,  total_duration=100):
    """Generate x and y coordinates for a parabolic 2D motion in Earth's gravitational field."""
+   
+   # Initial conditions
    x_n1  = x_0
    y_n1  = y_0
    vx_n1 = vx_0
    vy_n1 = vy_0
    
+   # Initialize trajectory points list
    trajectory = []
    
+   # Set thenumber of points to compute 
+   # and compute them according to parabolic motion cinetic equations
    steps = int(np.ceil(total_duration / delta_t) + 1)
    if steps > 1:
       for current_step, time_step in enumerate(np.linspace(0,1, steps)):
@@ -59,8 +54,10 @@ def generate_2D_bullet_trajectory(x_0, y_0, vx_0, vy_0, delta_t, G, Q,  total_du
             vx_n = vx_n1
             vy_n = vy_n1 - G*delta_t
             
+            # Store generate point
             trajectory.append((x_n1, y_n1))
             
+            # Update variables for next iteration
             x_n1 = x_n
             y_n1 = y_n
             vx_n1 = vx_n
@@ -79,13 +76,12 @@ def implement_kalman_filter(X_0, P_0, F, U, Q, R):
    filtered_velocities = []
    
    measurements, time_steps= generate_2D_bullet_trajectory(*X_0, delta_t=DELTA_T, G=G, Q=Q, total_duration=150)
-   # measurements[0:80] = [None, None]
-   # measurements[120:160] = [None, None]
       
    # set intial conditions
    x_k1 = X_0
    P_k1 = P_0
    
+   # For each 
    for i in np.arange(time_steps):
       x_k_k1, P_k_k1 = compute_prior_estimates(x_k1, P_k1, F=F, Q=Q, U=U)
       there_are_no_missing_measures = not np.isnan(measurements[i]).all()
@@ -95,7 +91,7 @@ def implement_kalman_filter(X_0, P_0, F, U, Q, R):
                                                                         measurement=measurements[i], 
                                                                         H=H, 
                                                                         R=R)   
-         
+         # rename variables for clarity
          x_k1 = updated_state
          P_k1 = updated_covariance_state
          
@@ -140,6 +136,7 @@ if __name__ == "__main__":
    P_0 = 1e6*Q
    X_0 = np.array([0, 0, 300, 600])
    
+   # Plot generated trajectories
    fig = plt.figure()
    x_limits = []
    for u in U:
@@ -151,13 +148,10 @@ if __name__ == "__main__":
    plt.legend()
    plt.savefig(os.path.join(output_folder_path, 'trajectory.png'))
    plt.clf()
-            
+   
+   # Plot and save x trajecotory of simulated 
    plt.figure()
    plt.plot(experiment_traj[:,0], kalman_traj[:,0])
    plt.savefig(os.path.join(output_folder_path, 'x_relation_check.png'))   
-
-# import seaborn as sns
-# sns.residplot(x=kalman_traj[:,0], y=experiment_traj[:,0]) 
-# sns.residplot(x=kalman_traj[:,1], y=experiment_traj[:,1]) 
    
    
